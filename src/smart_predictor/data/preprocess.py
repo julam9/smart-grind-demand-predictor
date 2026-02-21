@@ -1,35 +1,69 @@
 # columns names still need to be adjusted
-
-from pathlib import Path
 import pandas as pd
 
-
-RAW_DATA_DIR = Path("data/raw")
-PROCESSED_DATA_DIR = Path("data/processed")
-
-
-def load_raw_batches() -> pd.DataFrame:
+def preprocess_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Load all raw parquet batch files and concatenate them.
+    Clean and standardize raw energy consumption data.
+
+    Expected columns (example):
+        - timestamp
+        - demand
+
+    Returns:
+        Cleaned DataFrame sorted by timestamp.
     """
-    files = sorted(RAW_DATA_DIR.glob("energy_offset_*.parquet"))
 
-    if not files:
-        raise FileNotFoundError("No raw data files found.")
+    df = df.copy()
 
-    df_list = [pd.read_parquet(f) for f in files]
-    df = pd.concat(df_list, ignore_index=True)
+    # -----------------------------
+    # 1. Standardize column names
+    # -----------------------------
+    df.columns = df.columns.str.lower().str.strip()
+
+    # -----------------------------
+    # 2. Ensure timestamp column exists
+    # -----------------------------
+    if "timestamp" not in df.columns:
+        raise ValueError("Expected 'timestamp' column not found.")
+
+    # -----------------------------
+    # 3. Convert timestamp to datetime
+    # -----------------------------
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
+    # Remove invalid timestamps
+    df = df.dropna(subset=["timestamp"])
+
+    # -----------------------------
+    # 4. Sort chronologically
+    # -----------------------------
+    df = df.sort_values("timestamp")
+
+    # -----------------------------
+    # 5. Remove duplicate timestamps
+    # -----------------------------
+    df = df.drop_duplicates(subset=["timestamp"])
+
+    # -----------------------------
+    # 6. Ensure demand column exists
+    # -----------------------------
+    if "demand" not in df.columns:
+        raise ValueError("Expected 'demand' column not found.")
+
+    # -----------------------------
+    # 7. Handle missing demand values
+    # -----------------------------
+    df["demand"] = pd.to_numeric(df["demand"], errors="coerce")
+
+    # Option 1: Drop missing
+    df = df.dropna(subset=["demand"])
+
+    # Option 2 (alternative): Forward fill
+    # df["demand"] = df["demand"].fillna(method="ffill")
+
+    # -----------------------------
+    # 8. Reset index
+    # -----------------------------
+    df = df.reset_index(drop=True)
 
     return df
-
-
-def load_processed_data(filename: str) -> pd.DataFrame:
-    """
-    Load processed dataset by filename.
-    """
-    file_path = PROCESSED_DATA_DIR / filename
-
-    if not file_path.exists():
-        raise FileNotFoundError(f"{filename} not found in processed data.")
-
-    return pd.read_parquet(file_path)
