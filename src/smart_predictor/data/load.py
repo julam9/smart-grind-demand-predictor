@@ -1,30 +1,35 @@
-# -*- coding: utf-8 -*-
-import click
-import logging
+# src/smart_predictor/data/load.py
+
 from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
+import pandas as pd
 
 
-@click.command()
-@click.argument('input_filepath', type=click.Path(exists=True))
-@click.argument('output_filepath', type=click.Path())
-def main(input_filepath, output_filepath):
-    """ Runs data processing scripts to turn raw data from (../raw) into
-        cleaned data ready to be analyzed (saved in ../processed).
+RAW_DATA_DIR = Path("data/raw")
+PROCESSED_DATA_DIR = Path("data/processed")
+
+
+def load_raw_batches() -> pd.DataFrame:
     """
-    logger = logging.getLogger(__name__)
-    logger.info('making final data set from raw data')
+    Load all raw parquet batch files and concatenate them.
+    """
+    files = sorted(RAW_DATA_DIR.glob("energy_offset_*.parquet"))
+
+    if not files:
+        raise FileNotFoundError("No raw data files found.")
+
+    df_list = [pd.read_parquet(f) for f in files]
+    df = pd.concat(df_list, ignore_index=True)
+
+    return df
 
 
-if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+def load_processed_data(filename: str) -> pd.DataFrame:
+    """
+    Load processed dataset by filename.
+    """
+    file_path = PROCESSED_DATA_DIR / filename
 
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
+    if not file_path.exists():
+        raise FileNotFoundError(f"{filename} not found in processed data.")
 
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
-
-    main()
+    return pd.read_parquet(file_path)
