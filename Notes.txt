@@ -1,0 +1,30 @@
+if it contains a logical, then we need unit test for it 
+if it doesn't contain logical, then we can choose not to use unit test
+
+professional MLOps Architecture Summary : 
+- data ingestion logic 
+- preprocessing logic 
+- feature logic 
+- model logic
+- pipeline (orchestrator)
+- CLI/Makefile/Airflow
+
+
+Pipelines can be triggered by  : 
+1.cron
+2.airflow
+3.CI
+4.API
+
+
+pipeline is not logic. It is orchestration. It should :
+- be thin
+- call modules
+- handle configuration
+- log steps
+
+
+MLOps is about : 
+- Stability first 
+- Automation second 
+- Scale third
